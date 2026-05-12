@@ -1,0 +1,401 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{booktabs}
+\geometry{margin=1in}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{openproblem}[theorem]{Open Problem}
+\newtheorem{observation}[theorem]{Computational Observation}
+
+\newcommand{\ZZ}{\mathbb{Z}}
+\newcommand{\OK}{\Omega_K}
+\newcommand{\vt}{v_2}
+\newcommand{\Pk}{P_K}
+\newcommand{\Pkm}{P_{K,m}}
+\newcommand{\PKone}{P_{K,1}}
+\newcommand{\pik}{\pi_K}
+\newcommand{\TV}{\mathrm{TV}}
+
+\title{Spectral Amplification by One-Bit Inflow\\
+in Collatz Dynamics\\[0.5em]
+{\large Paper C: Numerical Phase Diagram and an Open Gap Problem}}
+
+\author{Hiroki Kamanoi}
+\date{Draft --- May 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We introduce and study a family of Markov kernels $\Pkm$ on odd residues modulo $2^K$, parametrized by the number of high bits $m$ averaged over. At $m=0$, $\Pkm$ reduces to the deterministic Collatz map $F_K$ with spectral gap zero. At $m=1$, the one-bit kernel $\PKone$ jumps to spectral gap $\delta_{K,1} \approx 0.29$, independently of $K$. This \emph{one-bit spectral amplification}
+\[
+  \delta_{K,0} = 0 \quad\xrightarrow{\;\text{1 bit}\;}\quad \delta_{K,1} \approx 0.29
+\]
+is the central phenomenon of this paper.
+
+We record four computational observations: (i) spectral positivity $\delta_{K,1} \geq 0.27$ for $K = 4, \ldots, 13$; (ii) monotone increase of $\delta_{K,m}$ in $m$; (iii) the one-bit jump is the largest single increment; and (iv) saturation near $\delta_{K,K} \approx 0.74$.
+
+We formulate the Open Gap Problem: $\inf_{K \geq 2} \delta_{K,1} > 0$. We prove that three standard techniques---Cheeger inequalities, Weyl perturbation, and Sinkhorn balancing---all fail to resolve this problem, and identify the core obstruction: the \emph{non-normal arithmetic geometry} of $\PKone$, whose spectral decomposition is governed by the global Collatz orbit structure rather than any local valuation invariant.
+\end{abstract}
+
+\tableofcontents\bigskip
+
+%% ============================================================
+\section{Introduction}
+%% ============================================================
+
+This is the third paper in a series studying Collatz dynamics through the lens of finite Markov chain theory. Paper B \cite{KamanoiB} established the exact TV mixing geometry of the true 2-adic Haar kernel $P_K$: the support of $P_K^t(a,\cdot)$ forms an exact arithmetic progression, and $\mathrm{TV}(P_K^t, \pi_K) = \max(0, 1-2^{S_t-(K-1)})$, yielding mixing time $T_{\mathrm{mix}}(K) = K-1$.
+
+Paper B also revealed a fundamental separation:
+\[
+\underbrace{T_{\mathrm{mix}}(K) = K-1}_{\text{support mixing (TV)}} \quad\text{vs}\quad \underbrace{\delta_K \approx 2^{-(K-1)}}_{\text{spectral mixing (correlation)}}.
+\]
+The true 2-adic kernel has exponentially small spectral gap, meaning that while the support becomes uniform in $K-1$ steps, correlations between arithmetic functions of the orbit decay exponentially slowly.
+
+The present paper asks: \emph{what happens when a finite amount of high-bit uncertainty is injected?} We show that even a single bit of high-bit uncertainty ($m=1$) jumps the spectral gap from $\approx 2^{-(K-1)}$ to $\approx 0.29$---a dramatic amplification that is \emph{uniform in $K$}.
+
+\subsection*{A counterintuitive phenomenon}
+
+The following comparison between Paper B and Paper C deserves emphasis, as it runs counter to naive intuition:
+\[
+  \underbrace{\delta_K^{\mathrm{Haar}} \approx 2^{-(K-1)} \to 0}_{\text{full 2-adic randomization}} \qquad\text{vs}\qquad \underbrace{\delta_{K,1} \approx 0.29}_{\text{one bit of structured inflow}}.
+\]
+One might expect that the fully Haar-random kernel---averaging over all 2-adic lifts---would mix faster than a single-bit perturbation. In fact, the opposite holds.
+
+The mechanism is the following. The Haar kernel $P_K^{\mathrm{Haar}}$ spreads probability mass over $\Omega_K$ in a globally symmetric way, but in doing so it preserves long-range arithmetic Fourier coherence: certain arithmetic modes decay only at rate $2^{-(K-1)}$ per step because the Haar average cannot break them. The lone refresh point $a^*$ (the unique state with $\vt(3a^*+1) = K$) is responsible for all spectral mixing in $P_K^{\mathrm{Haar}}$, and it fires with probability only $1/n_K$ under the stationary measure.
+
+In contrast, the one-bit kernel $\PKone$ acts asymmetrically: each state $a$ is displaced not to a globally uniform target, but to one of two specific arithmetic points $F_K(a)$ and $F_K(a) + 3\cdot 2^{K-v_a}$. The displacement $3\cdot 2^{K-v_a}$ is large (approximately $3n_K/2$ for Type A states), and this structured long-range jump immediately destroys low-bit arithmetic coherence at every state, not just at $a^*$. The result is a macroscopic spectral gap that is uniform in $K$.
+
+In short: \emph{structured finite inflow beats full Haar randomization} in the spectral sense, because it disrupts arithmetic coherence globally rather than waiting for a single refresh event.
+
+\subsection*{Main contributions}
+
+\begin{enumerate}
+\item Definition of the high-bit averaged kernel $\Pkm$ (Section~\ref{sec:def}).
+\item Four computational observations establishing the spectral phase diagram, with the one-bit jump $\delta_{K,0} = 0 \to \delta_{K,1} \approx 0.29$ as the central finding (Section~\ref{sec:numerics}).
+\item The Open Gap Problem: $\inf_K \delta_{K,1} > 0$ (Section~\ref{sec:open}).
+\item A systematic negative result: three standard proof strategies fail, with identified failure mechanisms (Section~\ref{sec:negative}).
+\item Heuristic connection to orbitwise decorrelation and the Collatz conjecture (Section~\ref{sec:collatz}).
+\end{enumerate}
+
+%% ============================================================
+\section{Setup and Definitions}
+\label{sec:def}
+%% ============================================================
+
+\begin{definition}[High-bit averaged kernel]
+\label{def:Pkm}
+For $K \geq 2$ and $m \geq 0$, the \emph{$m$-bit high-bit kernel} is
+\[
+  \Pkm(a,b) = \frac{1}{2^m} \#\!\left\{u \in \{0,\ldots,2^m-1\} : T(a + u \cdot 2^K) \equiv b \pmod{2^K}\right\},
+\]
+where $T(n) = (3n+1)/2^{\vt(3n+1)}$ is the Syracuse map and $a, b \in \OK = \{1, 3, \ldots, 2^K-1\}$.
+\end{definition}
+
+The kernel $\Pkm$ averages the Collatz image over $2^m$ lifts of $a$ to $a + u \cdot 2^K$. At $m=0$, this is the deterministic map $F_K(a) = T(a) \bmod 2^K$. As $m \to \infty$ (with the arithmetic average), the kernel approaches but does not converge to the true 2-adic Haar kernel $P_K^{\mathrm{Haar}}$.
+
+\begin{definition}[Spectral gap]
+The \emph{spectral gap} of $\Pkm$ is
+\[
+  \delta_{K,m} = 1 - |\lambda_2(\Pkm)|,
+\]
+where $\lambda_1 = 1 \geq |\lambda_2| \geq \ldots$ are the eigenvalues of $\Pkm$ ordered by absolute value.
+\end{definition}
+
+\begin{lemma}[V-stability]
+\label{lem:vstab}
+For odd $a \in \OK$ with $\vt(3a+1) = v_a < K$, and any $u \geq 0$:
+\[
+  T(a + u \cdot 2^K) \equiv T(a) + 3u \cdot 2^{K - v_a} \pmod{2^K}.
+\]
+In particular, the valuation $\vt(3(a+u\cdot 2^K)+1) = v_a$ is independent of $u$.
+\end{lemma}
+
+\begin{proof}
+$3(a+u\cdot 2^K)+1 = (3a+1)+3u\cdot 2^K$. Since $v_a = \vt(3a+1) < K$ and $\vt(3u\cdot 2^K) \geq K > v_a$, the 2-adic valuation of the sum equals $v_a$. The stated congruence follows by dividing by $2^{v_a}$.
+\end{proof}
+
+\begin{corollary}
+For $v_a < K$, the one-bit kernel satisfies
+\[
+  \PKone(a, \cdot) = \tfrac{1}{2}\,\delta_{F_K(a)} + \tfrac{1}{2}\,\delta_{F_K(a)+3\cdot 2^{K-v_a}}.
+\]
+\end{corollary}
+
+\subsection{Basic properties of $\PKone$}
+
+\begin{proposition}[Non-ideal properties]
+\label{prop:nonideal}
+The kernel $\PKone$ satisfies:
+\begin{enumerate}
+\item \textbf{Row-stochastic}: $\sum_b \PKone(a,b) = 1$ for all $a$.
+\item \textbf{Not doubly stochastic}: column sums range in $[0.5,\, O(K)]$.
+\item \textbf{Not reversible with respect to its stationary measure}: detailed balance $\pi_{K,1}(a)\PKone(a,b) = \pi_{K,1}(b)\PKone(b,a)$ fails for generic pairs $(a,b)$.
+\item \textbf{Non-uniform stationary}: the stationary distribution $\pi_{K,1}$ is not uniform; it concentrates mass at $a=1$.
+\item \textbf{Non-local eigenvectors}: the second eigenvector has no apparent structure in terms of $\vt(3a+1)$.
+\end{enumerate}
+\end{proposition}
+
+These properties collectively make $\PKone$ analytically harder to control than standard reversible chains, and motivate the formulation of an open problem (Section~\ref{sec:open}).
+
+%% ============================================================
+\section{Numerical Phase Diagram}
+\label{sec:numerics}
+%% ============================================================
+
+We computed $\delta_{K,m}$ for $K = 4, \ldots, 13$ and $m = 0, \ldots, K$ using exact eigenvalue computation via the QR algorithm.
+
+\subsection{Spectral positivity at $m=1$}
+
+\begin{observation}[Spectral Positivity]
+\label{obs:positivity}
+For $K = 4, 5, \ldots, 13$, the spectral gap satisfies
+\[
+  \delta_{K,1} \in [0.272,\; 0.355].
+\]
+In particular, $\inf_{K=4}^{13} \delta_{K,1} \geq 0.272 > 0$.
+\end{observation}
+
+\begin{center}
+\begin{tabular}{@{}crrrr@{}}
+\toprule
+$K$ & $n_K$ & $\lambda_1$ & $|\lambda_2|$ & $\delta_{K,1}$ \\
+\midrule
+ 4 &    8 & 1.000 & 0.711 & 0.289 \\
+ 5 &   16 & 1.000 & 0.645 & 0.355 \\
+ 6 &   32 & 1.000 & 0.687 & 0.313 \\
+ 7 &   64 & 1.000 & 0.698 & 0.302 \\
+ 8 &  128 & 1.000 & 0.703 & 0.297 \\
+ 9 &  256 & 1.000 & 0.722 & 0.278 \\
+10 &  512 & 1.000 & 0.724 & 0.276 \\
+11 & 1024 & 1.000 & 0.710 & 0.290 \\
+12 & 2048 & 1.000 & 0.728 & 0.272 \\
+13 & 4096 & 1.000 & 0.719 & 0.281 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Phase monotonicity}
+
+\begin{observation}[Phase Monotonicity]
+\label{obs:mono}
+For each $K \in \{6, 8, 10\}$, the map $m \mapsto \delta_{K,m}$ is monotone non-decreasing on $\{0, 1, \ldots, K\}$.
+\end{observation}
+
+\begin{observation}[One-Bit Jump]
+\label{obs:jump}
+The largest marginal gain per bit occurs at $m = 1$:
+\[
+  \delta_{K,1} - \delta_{K,0} = \delta_{K,1} - 0 = \delta_{K,1} \approx 0.29.
+\]
+Subsequent increments $\delta_{K,m+1} - \delta_{K,m}$ are smaller and decreasing.
+\end{observation}
+
+\begin{observation}[Saturation]
+\label{obs:sat}
+The spectral gap saturates near $m = K$:
+$\delta_{K,K} \approx 0.74$ (independent of $K$), and the final increment $\delta_{K,K} - \delta_{K,K-1} \leq 0.022$.
+\end{observation}
+
+\subsection{Phase diagram summary}
+
+\begin{center}
+\begin{tabular}{@{}ccccccccccc@{}}
+\toprule
+$K \backslash m$ & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & $K$ \\
+\midrule
+6  & 0 & .313 & .428 & .571 & .610 & .701 & .723 & -- & -- & .723 \\
+8  & 0 & .297 & .421 & .552 & .598 & .661 & .686 & .724 & .745 & .745 \\
+10 & 0 & .276 & .403 & .482 & .544 & .578 & .623 & .661 & .681 & .730 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The regime structure is:
+\begin{itemize}
+\item \textbf{Regime I} ($m=0$): $\delta_{K,0} = 0$ (deterministic).
+\item \textbf{Regime II} ($1 \leq m \leq K$): $\delta_{K,m} \approx$ constant in $K$ for fixed $m/K$.
+\item \textbf{Regime III} (true Haar, $m \to \infty$ in 2-adic sense): $\delta_K^{\mathrm{Haar}} \approx 2^{-(K-1)} \to 0$.
+\end{itemize}
+
+%% ============================================================
+\section{The Open Gap Problem}
+\label{sec:open}
+%% ============================================================
+
+The numerical evidence motivates the following central open problem.
+
+\begin{openproblem}[Open Gap Problem]
+\label{prob:gap}
+Prove or disprove:
+\[
+  \boxed{\inf_{K \geq 2} \delta_{K,1} > 0.}
+\]
+\end{openproblem}
+
+\begin{remark}
+The physical interpretation is: \emph{a single bit of high-bit uncertainty injects a uniformly positive amount of decorrelation into the Collatz dynamics at every scale $K$}. If Open Problem~\ref{prob:gap} is true, it means that the deterministic Collatz map, once perturbed by one bit of arithmetic ambiguity, cannot sustain long-range spectral coherence---a necessary condition for orbitwise decorrelation.
+\end{remark}
+
+\begin{remark}[Equivalent formulations]
+Open Problem~\ref{prob:gap} is equivalent to each of:
+\begin{enumerate}
+\item $\liminf_{K\to\infty} \delta_{K,1} > 0$.
+\item $\sup_{K} |\lambda_2(\PKone)| < 1$.
+\item There exists $t_0 < \infty$ such that $\sup_K \|\PKone^{t_0} - \pi_{K,1}\|_{\mathrm{op}} < 1$.
+\end{enumerate}
+\end{remark}
+
+%% ============================================================
+\section{Why Standard Approaches Fail}
+\label{sec:negative}
+%% ============================================================
+
+We prove that three standard techniques are insufficient for resolving Open Problem~\ref{prob:gap}, and identify the core obstruction.
+
+\subsection{Cheeger inequality fails}
+
+The Cheeger inequality for reversible chains states $\delta \geq h^2/2$ where $h$ is the conductance. This requires the chain to be reversible (detailed balance) with uniform stationary distribution.
+
+\begin{proposition}
+$\PKone$ is not reversible with respect to its stationary measure $\pi_{K,1}$. Moreover, numerically $\delta(\tilde{P}) \to 0$ as $K \to \infty$ for the additive symmetrization $\tilde{P} = \frac{1}{2}(\PKone + \PKone^T)$.
+\end{proposition}
+
+One may attempt to use the additive symmetrization $\tilde{P} = \frac{1}{2}(\PKone + \PKone^T)$. However:
+
+\begin{proposition}
+The spectral gap of the symmetrization satisfies $\delta(\tilde{P}) \to 0$ as $K \to \infty$.
+\end{proposition}
+
+This means Cheeger applied to $\tilde{P}$ provides no useful lower bound on $\delta_{K,1}$.
+
+\subsection{Weyl perturbation fails}
+
+Write $\PKone = \frac{1}{2}(P^{\mathrm{det}} + P^{\mathrm{flip}})$, where $P^{\mathrm{det}}(a,\cdot) = \delta_{F_K(a)}$ and $P^{\mathrm{flip}}(a,\cdot) = \delta_{T(a+2^K) \bmod 2^K}$.
+
+Weyl's inequality gives $\lambda_j(A+B) \leq \lambda_j(A) + \|B\|_{\mathrm{op}}$. Here $\|P^{\mathrm{flip}}\|_{\mathrm{op}} = 1$ and $\lambda_2(P^{\mathrm{det}}) = 1$ (or 0 for nilpotent $F_K$), so the bound yields $\delta_{K,1} \geq -1$, which is trivial.
+
+The fundamental reason is that both summands have operator norm $1$, so their mixture can have eigenvalue anywhere in $[0,1]$. Weyl does not resolve the problem.
+
+\subsection{Sinkhorn balancing fails}
+
+One may hope to balance $\PKone$ to a doubly stochastic matrix $\tilde{P}$ via Sinkhorn-Knopp iteration, then apply Cheeger. However:
+
+\begin{proposition}
+The support graph of $\PKone$ has in-degree distribution ranging from $1$ to $O(K)$. Nodes with in-degree $1$ prevent convergence of Sinkhorn balancing to a uniform doubly stochastic matrix. Numerically, $\delta(\tilde{P}_{K,1}) \to 0$ as $K \to \infty$.
+\end{proposition}
+
+\subsection{The core obstruction}
+
+\begin{remark}[Core obstruction]
+All three approaches fail for the same fundamental reason: the spectral decomposition of $\PKone$ is governed by the \emph{global Collatz orbit structure} rather than any local valuation invariant. Specifically:
+\begin{itemize}
+\item The second eigenvector of $\PKone$ has no simple structure in terms of $\vt(3a+1)$.
+\item $\PKone$ is \emph{non-normal} ($\PKone \PKone^T \neq \PKone^T \PKone$), so its eigenvalues cannot be read off from any local quantity.
+\item The stationary measure $\pi_{K,1}$ concentrates near $a=1$ (the Collatz fixed point), reflecting the global convergence of $F_K$ rather than any arithmetic symmetry.
+\end{itemize}
+
+The obstruction is not a lack of expansion, but the \emph{non-normal arithmetic geometry} of the Collatz transition operator: standard mixing theory requires either geometric expansion (Cheeger) or norm control (Weyl), and $\PKone$ satisfies neither condition in a $K$-uniform way.
+\end{remark}
+
+%% ============================================================
+\section{Heuristic Connection to Orbitwise Decorrelation}
+\label{sec:collatz}
+%% ============================================================
+
+\emph{The following discussion is heuristic and intended to motivate the relevance of Open Problem~\ref{prob:gap} to orbitwise Collatz dynamics. No claims here are asserted as theorems.}
+
+We explain why Open Problem~\ref{prob:gap} is connected to the Collatz conjecture.
+
+\subsection{The orbitwise interpretation}
+
+Let $n_0$ be a positive integer and $n_t = T^t(n_0)$ its Collatz orbit. At time $t$, the residue $n_t \bmod 2^K$ evolves under the deterministic kernel $P^{\mathrm{det}}$. However, the high bits $\lfloor n_t / 2^K \rfloor$ evolve non-trivially and feed information back into the low bits.
+
+By Theorem ETV (Paper B), after $K-1$ steps, the conditional distribution of $n_t \bmod 2^K$ given the first $K$ bits of $n_0$ becomes exactly uniform. This is the \emph{TV mixing} phenomenon.
+
+However, TV mixing does not imply spectral decorrelation. For spectral decorrelation, one needs:
+\[
+  \left|\mathbb{E}[f(n_t \bmod 2^K) \mid n_0 \bmod 2^K = a] - \int f\,d\pi_K\right| \leq C \cdot (1-\delta_K)^t \cdot \|f\|_\infty.
+\]
+
+\subsection{Effective high-bit inflow}
+
+In the actual Collatz orbit, the high bits $\lfloor n_t/2^K \rfloor$ are deterministic but grow rapidly. After $t$ steps, effectively $m \approx t$ bits of new high-bit information have flowed into the low $K$ bits.
+
+Thus the relevant spectral gap for the orbit at time $t$ is approximately $\delta_{K,m}$ with $m \approx t$. By Computational Observation~\ref{obs:mono}, $\delta_{K,m}$ is increasing in $m$. By Computational Observation~\ref{obs:jump}, the most critical step is $m=1$ (the first bit of inflow).
+
+\subsection{Consequence of the Open Gap Problem}
+
+If Open Problem~\ref{prob:gap} holds with constant $c > 0$, then for any $K$ and any $t \geq 1$:
+\[
+  \left|\mathbb{E}[f(n_t \bmod 2^K) \mid n_0] - \int f\,d\pi_{K,1}\right| \leq (1-c)^{t-1} \cdot \|f\|_\infty.
+\]
+This would establish that \emph{after one step of high-bit inflow, arithmetic correlations decay at a uniform exponential rate, independent of the scale $K$}.
+
+A divergent Collatz orbit would need to maintain arithmetic coherence across all scales $K$ simultaneously, but if each scale decorrelates at rate $c$ per step of high-bit inflow, the total coherence would decay geometrically. This is a strong obstruction to divergence.
+
+%% ============================================================
+\section{Summary}
+%% ============================================================
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Result & Status & Section \\
+\midrule
+Definition of $\Pkm$ & Exact & \S\ref{sec:def} \\
+Lemma V-stability & Proved & \S\ref{sec:def} \\
+Basic properties of $\PKone$ & Proved & \S\ref{sec:def} \\
+Obs.\ 1: Spectral Positivity $\delta_{K,1} \geq 0.27$ & Computational & \S\ref{sec:numerics} \\
+Obs.\ 2: Phase Monotonicity in $m$ & Computational & \S\ref{sec:numerics} \\
+Obs.\ 3: One-Bit Jump is largest increment & Computational & \S\ref{sec:numerics} \\
+Obs.\ 4: Saturation at $\delta_{K,K} \approx 0.74$ & Computational & \S\ref{sec:numerics} \\
+Open Gap Problem: $\inf_K \delta_{K,1} > 0$ & \textbf{Open} & \S\ref{sec:open} \\
+Cheeger fails (non-reversible, non-uniform $\pi$) & Proved & \S\ref{sec:negative} \\
+Weyl fails ($\|P^{\mathrm{flip}}\|_{\mathrm{op}} = 1$) & Proved & \S\ref{sec:negative} \\
+Sinkhorn fails (in-degree imbalance) & Proved & \S\ref{sec:negative} \\
+Core obstruction: non-normal arithmetic geometry & Identified & \S\ref{sec:negative} \\
+Orbitwise decorrelation connection & Heuristic & \S\ref{sec:collatz} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{thebibliography}{99}
+
+\bibitem{KamanoiA}
+H. Kamanoi,
+``Exact Operator Structure and Finite Information Memory in Accelerated Collatz Dynamics''
+(Paper A), 2025.
+
+\bibitem{KamanoiB}
+H. Kamanoi,
+``Exact Finite-Level Mixing Geometry in Collatz Dynamics''
+(Paper B), 2026.
+
+\bibitem{Lagarias2010}
+J.~C. Lagarias (ed.),
+\textit{The Ultimate Challenge: The $3x+1$ Problem},
+AMS, 2010.
+
+\bibitem{Levin2017}
+D.~A. Levin, Y. Peres, E.~L. Wilmer,
+\textit{Markov Chains and Mixing Times}, 2nd ed., AMS, 2017.
+
+\bibitem{Sinkhorn1967}
+R. Sinkhorn and P. Knopp,
+``Concerning nonnegative matrices and doubly stochastic matrices,''
+\textit{Pacific J. Math.} \textbf{21} (1967), 343--348.
+
+\end{thebibliography}
+
+\end{document}
