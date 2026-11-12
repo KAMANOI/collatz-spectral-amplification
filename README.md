@@ -83,3 +83,6 @@ This repository is part of a series on Collatz dynamics:
 Hiroki Kamanoi  
 hirokikamanoi@gmail.com  
 https://github.com/KAMANOI
+
+---
+Related research and services by HDR (Human Driven Reality): https://hdr-ai.com/#research
